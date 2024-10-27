@@ -4,7 +4,7 @@
     {
         static void Main(string[] args)
         {
-            Game game = new();
+            Game game = new(0, 15);
             game.Start();
         }
     }
@@ -39,9 +39,9 @@
         private Player _player;
         private bool _isRunning = false;
 
-        public Game()
+        public Game(int minCardRank, int maxCardRank)
         {
-            _dealer = new Dealer();
+            _dealer = new Dealer(minCardRank, maxCardRank);
             _player = new Player();
         }
 
@@ -76,7 +76,7 @@
                 switch (userCommand)
                 {
                     default:
-                        _player.TakeCard(_dealer.GiveNextCard());
+                        GiveCardToPlayer();
                         break;
 
                     case CommandEnd:
@@ -89,6 +89,19 @@
                 }
             }
         }
+
+        public void GiveCardToPlayer()
+        {
+            if (_dealer.TryGiveNextCard(out Card card))
+            {
+                _player.TakeCard(card);
+            }
+            else
+            {
+                Console.WriteLine("Карт не осталось");
+                Console.ReadKey();
+            }
+        }
     }
 
     public class Dealer
@@ -96,14 +109,14 @@
         private int _cardsDublicates = 3;
         private Deck _deck;
 
-        public Dealer()
+        public Dealer(int minCardRank, int maxCardRank)
         {
-            CreateDeck();
+            CreateDeck(minCardRank, maxCardRank);
         }
 
-        public Card GiveNextCard()
+        public bool TryGiveNextCard(out Card card)
         {
-            return _deck.GetNextCard();
+            return _deck.TryGetNextCard(out card);
         }
 
         public void TakeCards(List<Card> cards)
@@ -116,9 +129,9 @@
             _deck.ShuffleCards();
         }
 
-        public void CreateDeck()
+        public void CreateDeck(int minCardRank, int maxCardRank)
         {
-            _deck = new Deck(_cardsDublicates);
+            _deck = new Deck(_cardsDublicates, minCardRank, maxCardRank);
         }
     }
 
@@ -161,17 +174,20 @@
 
     public class Deck
     {
+        private int _minCardRank = 0;
+        private int _maxCardRank = 15;
+
         private Stack<Card> _cards;
 
-        public Deck(int cardDublicates)
+        public Deck(int cardDublicates, int minCardRank, int maxCardRank)
         {
-            _cards = new(CreateDeck(cardDublicates));
+            _cards = new(CreateCards(cardDublicates, minCardRank, maxCardRank));
 
         }
 
-        public Card GetNextCard()
+        public bool TryGetNextCard(out Card card)
         {
-            return _cards.Pop();
+            return _cards.TryPop(out card);
         }
 
         public void TakeCadrs(List<Card> cards)
@@ -182,13 +198,20 @@
             }
         }
 
-        private List<Card> CreateDeck(int cardDublicates)
+        public void ShuffleCards()
+        {
+            List<Card> cards = _cards.ToList();
+            UserUtilits.Shuffle(cards);
+            _cards = new(cards);
+        }
+
+        private List<Card> CreateCards(int cardDublicates, int minCardRank, int maxCardRank)
         {
             List<Card> cards = new();
 
             for (int i = 0; i < cardDublicates; i++)
             {
-                for (int rank = Card.MinRank; rank <= Card.MaxRank; rank++)
+                for (int rank = minCardRank; rank <= maxCardRank; rank++)
                 {
                     cards.Add(new Card(rank));
                 }
@@ -196,28 +219,14 @@
 
             return cards;
         }
-
-        public void ShuffleCards()
-        {
-            List<Card> cards = _cards.ToList();
-            UserUtilits.Shuffle(cards);
-            _cards = new(cards);
-        }
     }
 
     public class Card
     {
-        private static int _minRank = 0;  
-        private static int _maxRank = 15;
-
         public Card(int rank)
         {
             Rank = rank;
         }
-
-        public static int MinRank { get => _minRank; }
-
-        public static int MaxRank { get => _maxRank; }
 
         public int Rank { get; }
     }
